@@ -4,3 +4,4 @@ _outputs/
 temp/
 *.pyc
 *.pkl
+weights/
