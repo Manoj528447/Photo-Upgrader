@@ -1,3 +1,5 @@
+import os
+import urllib.request
 import torch
 import cv2
 from realesrgan import RealESRGANer
@@ -6,7 +8,9 @@ from basicsr.archs.rrdbnet_arch import RRDBNet
 # Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Model architecture
+# -------------------------------
+# MODEL ARCHITECTURE
+# -------------------------------
 model = RRDBNet(
     num_in_ch=3,
     num_out_ch=3,
@@ -16,10 +20,24 @@ model = RRDBNet(
     scale=4
 )
 
-# Upsampler (memory safe)
+# -------------------------------
+# AUTO DOWNLOAD MODEL (IMPORTANT)
+# -------------------------------
+MODEL_URL = "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+MODEL_PATH = "weights/RealESRGAN_x4plus.pth"
+
+if not os.path.exists(MODEL_PATH):
+    os.makedirs("weights", exist_ok=True)
+    print("Downloading model weights...")
+    urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+    print("Download complete!")
+
+# -------------------------------
+# UPSAMPLER (MEMORY SAFE)
+# -------------------------------
 upsampler = RealESRGANer(
     scale=4,
-    model_path='weights/RealESRGAN_x4plus.pth',
+    model_path=MODEL_PATH,   # use dynamic path
     model=model,
     tile=128,
     tile_pad=10,
@@ -28,6 +46,9 @@ upsampler = RealESRGANer(
 )
 
 
+# -------------------------------
+# MAIN FUNCTION
+# -------------------------------
 def enhance_image(input_path, output_path, progress_callback=None):
 
     # STEP 1: Read image
@@ -36,7 +57,7 @@ def enhance_image(input_path, output_path, progress_callback=None):
     if progress_callback:
         progress_callback("Step 1: Reading image...", 10)
 
-    # STEP 2: Smart brightness fix (ONLY if dark)
+    # STEP 2: Smart brightness correction
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     brightness = gray.mean()
 
@@ -69,7 +90,7 @@ def enhance_image(input_path, output_path, progress_callback=None):
     if progress_callback:
         progress_callback("Step 5: AI Upscaling...", 85)
 
-    # STEP 6: Save image
+    # STEP 6: Save output
     cv2.imwrite(output_path, cv2.cvtColor(output, cv2.COLOR_RGB2BGR))
 
     if progress_callback:
